@@ -38,7 +38,7 @@ def get_hand_landmarker():
 
     # Fixed: BaseOptions imported directly from mediapipe.tasks.python
     options = HandLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path='hand_landmarker.task'), # Add your model asset path here
+        base_options=BaseOptions(model_asset_path='models/hand_landmarker.task'), # Add your model asset path here
         running_mode=vision.RunningMode.IMAGE,
         num_hands=1,
         min_hand_detection_confidence=0.5,
