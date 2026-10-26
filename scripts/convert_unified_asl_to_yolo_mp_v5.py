@@ -297,8 +297,9 @@ def parse_webcam_sequence(
     Returns:
         (sequence_id, frame_index)
     """
+    
     pattern = re.compile(
-        r"^(?P<sequence_id>[\d|\W]+)-(?P<frame_index>\d+)$",
+        r"^(?P<session_id>[\d|\w]+-)?(?P<sequence_id>[\d|\w]+)-(?P<frame_index>\d+)$",
         re.IGNORECASE,
     )
     match = pattern.match(image_path.stem)
@@ -307,7 +308,7 @@ def parse_webcam_sequence(
         return None, None
 
     return (
-        match.group("sequence_id"),
+        f"{match.group("session_id")}-{match.group("sequence_id")}" if match.group("session_id") else match.group("sequence_id"),
         int(match.group("frame_index")),
     )
 
@@ -338,7 +339,7 @@ def get_webcam_gesture_samples(
             sequence_id, frame_index = parse_webcam_sequence(
                 image_path
             )
-
+            
             samples.append(
                 {
                     "source": "webcam",
@@ -839,7 +840,7 @@ def save_image(
 def main():
     args = parse_args()
     random.seed(args.seed)
-
+    
     if not 0.0 < args.val_ratio < 1.0:
         raise ValueError(
             "--val-ratio must be between 0 and 1"

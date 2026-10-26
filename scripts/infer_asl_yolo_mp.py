@@ -2,7 +2,7 @@
 from ultralytics import YOLO
 import cv2
 
-model = YOLO("./runs_asl_web/detect/runs/detect/asl_unified_webcam_yolo11n_mp/weights/best.pt")
+model = YOLO("./models/asl_unified_letters_yolo11n_mp_best.pt")
 cap = cv2.VideoCapture(0)
 
 BUFFER_SIZE = 5
