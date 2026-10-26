@@ -54,5 +54,5 @@ Models are evaluated using symbol-based matching, which correctly supports the
 unified model, digit-only model, and letter-only model despite their different
 internal class-index ranges.
 
-See the [Benchmark datasets wiki page](https://github.com/ajdanoff/gesture-recognition-for-mobile-robot-swarm-control/wiki/Benchmark-datasets)
+See the [Benchmark datasets wiki page](https://github.com/ajdanoff/gesture-swarm-ros2/wiki/Benchmark-datasets)
 for the evaluation protocol, current results, and interpretation.
