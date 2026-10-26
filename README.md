@@ -33,3 +33,26 @@ make visualize
 ```bash
 make infer
 ```
+
+## Benchmark datasets
+
+Two held-out webcam benchmark datasets are available:
+
+- [ASL Webcam Benchmark — Original](https://huggingface.co/datasets/ajdanoff/asl-webcam-benchmark-original)
+- [ASL Webcam Benchmark — Augmented](https://huggingface.co/datasets/ajdanoff/asl-webcam-benchmark-augmented)
+
+The original benchmark contains one image per gesture class. The augmented
+benchmark contains the original image plus five controlled augmented variants
+per class.
+
+Both datasets use a shared 36-class YOLO label space:
+
+- `0–9`: digits
+- `10–35`: letters `A–Z`
+
+Models are evaluated using symbol-based matching, which correctly supports the
+unified model, digit-only model, and letter-only model despite their different
+internal class-index ranges.
+
+See the [Benchmark datasets wiki page](https://github.com/ajdanoff/gesture-recognition-for-mobile-robot-swarm-control/wiki/Benchmark-datasets)
+for the evaluation protocol, current results, and interpretation.
