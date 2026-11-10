@@ -83,9 +83,10 @@ jobs:
       - name: Validate benchmark dataset
         run: |
           python scripts/validate_benchmark.py \
-            --dataset-dir "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0" \
-            --data-yaml "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0/data.yaml"
-
+          --dataset-dir "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0" \
+          --data-yaml "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0/data.yaml" \
+          --expected-gesture-images 36
+      
       - name: Run benchmark evaluations
         run: |
           mkdir -p benchmark-results
