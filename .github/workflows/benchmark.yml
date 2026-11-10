@@ -82,10 +82,16 @@ jobs:
 
       - name: Validate benchmark dataset
         run: |
+          if [ "${{ steps.vars.outputs.benchmark }}" = "original" ]; then
+            expected_images=36
+          else
+            expected_images=216
+          fi
+          
           python scripts/validate_benchmark.py \
-          --dataset-dir "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0" \
-          --data-yaml "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0/data.yaml" \
-          --expected-gesture-images 36
+            --dataset-dir "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0" \
+            --data-yaml "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0/data.yaml" \
+            --expected-gesture-images "$expected_images"
       
       - name: Run benchmark evaluations
         run: |
