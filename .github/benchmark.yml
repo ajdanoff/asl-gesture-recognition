@@ -1,0 +1,140 @@
+name: ASL benchmark tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Benchmark dataset to evaluate"
+        required: true
+        default: "original"
+        type: choice
+        options:
+          - original
+          - augmented
+      models:
+        description: "Models to evaluate"
+        required: true
+        default: "unified,digits,letters"
+        type: string
+      iou_threshold:
+        description: "IoU threshold for symbol matching"
+        required: false
+        default: "0.45"
+        type: string
+
+  pull_request:
+    paths:
+      - "scripts/**"
+      - "requirements*.txt"
+      - ".github/workflows/benchmark.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Run ASL webcam benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Set benchmark variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "benchmark=${{ github.event.inputs.benchmark }}" >> "$GITHUB_OUTPUT"
+            echo "models=${{ github.event.inputs.models }}" >> "$GITHUB_OUTPUT"
+            echo "iou=${{ github.event.inputs.iou_threshold }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "benchmark=original" >> "$GITHUB_OUTPUT"
+            echo "models=unified,digits,letters" >> "$GITHUB_OUTPUT"
+            echo "iou=0.45" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download benchmark dataset
+        run: |
+          mkdir -p benchmark
+          if [ "${{ steps.vars.outputs.benchmark }}" = "original" ]; then
+            hf download \
+              ajdanoff/asl-webcam-benchmark-original \
+              --repo-type dataset \
+              --local-dir benchmark/asl-webcam-benchmark-original-v1.0.0
+          else
+            hf download \
+              ajdanoff/asl-webcam-benchmark-augmented \
+              --repo-type dataset \
+              --local-dir benchmark/asl-webcam-benchmark-augmented-v1.0.0
+          fi
+
+      - name: Validate benchmark dataset
+        run: |
+          python scripts/validate_benchmark.py \
+            --dataset-dir "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0" \
+            --data-yaml "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0/data.yaml"
+
+      - name: Run benchmark evaluations
+        run: |
+          mkdir -p benchmark-results
+          IFS=',' read -ra MODELS <<< "${{ steps.vars.outputs.models }}"
+
+          for model in "${MODELS[@]}"; do
+            model="$(echo "$model" | xargs)"
+            case "$model" in
+              unified)
+                model_id="ajdanoff/asl-unified-webcam-yolo11n-mp"
+                ;;
+              digits)
+                model_id="ajdanoff/asl-unified-digits-yolo11n-mp"
+                ;;
+              letters)
+                model_id="ajdanoff/asl-unified-letters-yolo11n-mp"
+                ;;
+              *)
+                echo "Unknown model: $model"
+                exit 1
+                ;;
+            esac
+
+            python scripts/run_benchmark.py \
+              --dataset-dir "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0" \
+              --data-yaml "benchmark/asl-webcam-benchmark-${{ steps.vars.outputs.benchmark }}-v1.0.0/data.yaml" \
+              --model "$model" \
+              --model-id "$model_id" \
+              --iou-threshold "${{ steps.vars.outputs.iou }}" \
+              --output "benchmark-results/${model}.json" \
+              --markdown-output "benchmark-results/${model}.md"
+          done
+
+      - name: Create combined summary
+        run: |
+          python scripts/summarize_benchmark.py \
+            --results-dir benchmark-results \
+            --output benchmark-results/summary.md
+
+      - name: Append results to job summary
+        run: |
+          if [ -f benchmark-results/summary.md ]; then
+            cat benchmark-results/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ steps.vars.outputs.benchmark }}
+          path: benchmark-results/
+          if-no-files-found: error
+          retention-days: 30
