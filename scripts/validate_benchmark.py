@@ -13,27 +13,46 @@ SHARED_CLASSES = [
     "U", "V", "W", "X", "Y", "Z",
 ]
 
+EXPECTED_GESTURE_IMAGES = {
+    "original": 36,
+    "augmented": 216,
+}
+
+EXPECTED_GROUND_TRUTH_INSTANCES = {
+    "original": 36,
+    "augmented": 216,
+}
 
 def main():
     parser = argparse.ArgumentParser(
         description="Validate an ASL webcam benchmark dataset."
     )
+
     parser.add_argument(
         "--dataset-dir",
         required=True,
         help="Path to the downloaded benchmark dataset directory.",
     )
+
     parser.add_argument(
         "--data-yaml",
         required=True,
         help="Path to the benchmark data.yaml file.",
     )
+
+    parser.add_argument(
+        "--benchmark",
+        choices=["original", "augmented"],
+        help="Benchmark type used for expected-count validation.",
+    )
+
     parser.add_argument(
         "--allow-background",
         action="store_true",
         default=True,
         help="Allow images without label files as background/no-gesture images.",
     )
+
     parser.add_argument(
         "--expected-gesture-images",
         type=int,
@@ -43,6 +62,7 @@ def main():
             "For the original benchmark, use 36."
         ),
     )
+
     args = parser.parse_args()
 
     dataset_dir = Path(args.dataset_dir).resolve()
@@ -174,6 +194,22 @@ def main():
     if invalid_class_ids:
         raise SystemExit(f"Invalid class IDs: {invalid_class_ids}")
 
+    if args.benchmark:
+        expected_images = EXPECTED_GESTURE_IMAGES[args.benchmark]
+        expected_instances = EXPECTED_GROUND_TRUTH_INSTANCES[args.benchmark]
+        
+        if len(labeled_images) != expected_images:
+            raise SystemExit(
+                f"Expected {expected_images} labeled gesture images for "
+                f"{args.benchmark} benchmark, but found {len(labeled_images)}."
+            )
+
+        if ground_truth_instances != expected_instances:
+            raise SystemExit(
+                f"Expected {expected_instances} ground-truth instances for "
+                f"{args.benchmark} benchmark, but found {ground_truth_instances}."
+            )
+
     if args.expected_gesture_images is not None:
         if len(labeled_images) != args.expected_gesture_images:
             raise SystemExit(
@@ -186,7 +222,7 @@ def main():
                 f"Expected {args.expected_gesture_images} ground-truth instances, "
                 f"but found {ground_truth_instances}."
             )
-
+    
     print(
         f"Validation passed: {len(labeled_images)} labeled gesture images, "
         f"{len(background_images)} background images, "

@@ -1,0 +1,24 @@
+services:
+  benchmark:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: asl-benchmark:latest
+    container_name: asl-benchmark
+    working_dir: /workspace
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - ./:/workspace
+    command:
+      - scripts/run_docker_benchmark.py
+      - --benchmark
+      - original
+      - --models
+      - unified,digits,letters
+      - --iou-threshold
+      - "0.45"
+      - --confidence
+      - "0.25"
+      - --output-dir
+      - benchmark-reports

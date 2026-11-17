@@ -1,0 +1,94 @@
+name: ASL benchmark tests (Docker)
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Benchmark dataset to evaluate"
+        required: true
+        default: "original"
+        type: choice
+        options:
+          - original
+          - augmented
+      models:
+        description: "Models to evaluate"
+        required: true
+        default: "unified,digits,letters"
+        type: string
+      iou_threshold:
+        description: "IoU threshold for symbol matching"
+        required: false
+        default: "0.45"
+        type: string
+      confidence:
+        description: "YOLO confidence threshold"
+        required: false
+        default: "0.25"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Run containerized ASL benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    container:
+      image: python:3.11-slim
+      env:
+        HF_HOME: /tmp/huggingface
+        MPLCONFIGDIR: /tmp/matplotlib
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git \
+            libgl1 \
+            libglib2.0-0
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Run Docker-style benchmark
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python scripts/run_docker_benchmark.py \
+            --benchmark "${{ github.event.inputs.benchmark }}" \
+            --models "${{ github.event.inputs.models }}" \
+            --iou-threshold "${{ github.event.inputs.iou_threshold }}" \
+            --confidence "${{ github.event.inputs.confidence }}" \
+            --output-dir benchmark-reports
+
+      - name: Append extended report to job summary
+        run: |
+          report="benchmark-reports/benchmark-report-${{ github.event.inputs.benchmark }}.md"
+
+          if [ -f "$report" ]; then
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: asl-benchmark-report-${{ github.event.inputs.benchmark }}
+          path: benchmark-reports/
+          if-no-files-found: error
+          retention-days: 90

@@ -71,8 +71,8 @@ def yolo_box_to_pixels(values, width, height):
 
     return int(class_id), [x1, y1, x2, y2]
 
-def resolve_model_path(model_id, model_filename):
-    if model_filename and (model_filename.endswith(".pt") or model_filename.endswith(".pth")):
+def resolve_model_path(model_id, model_filename, model_revision):
+    if model_filename and model_filename.endswith((".pt", ".pth")):
         candidate = Path(model_filename)
 
         if candidate.exists():
@@ -85,11 +85,13 @@ def resolve_model_path(model_id, model_filename):
 
     print(f"Downloading model: {model_id}")
     print(f"Requested filename: {filename}")
+    print(f"Requested revision: {model_revision or 'latest'}")
 
     try:
         return hf_hub_download(
             repo_id=model_id,
             filename=filename,
+            revision=model_revision,
         )
     except Exception as error:
         raise SystemExit(
@@ -172,6 +174,11 @@ def main():
         action="store_true",
         help="Disable the expected ground-truth count check.",
     )
+    parser.add_argument(
+        "--model-revision",
+        default=None,
+        help="Optional Hugging Face repository revision to pin.",
+    )
     args = parser.parse_args()
 
     dataset_dir = Path(args.dataset_dir).resolve()
@@ -199,7 +206,11 @@ def main():
     if not label_dir.exists():
         raise SystemExit(f"Label directory does not exist: {label_dir}")
 
-    model_path = resolve_model_path(args.model_id, args.model_filename)
+    model_path = resolve_model_path(
+        args.model_id, 
+        args.model_filename,
+        args.model_revision
+    )
 
     model = YOLO(model_path)
     model_names = model.names
@@ -238,6 +249,7 @@ def main():
         "background_false_positives": 0,
         "per_class": {},
         "missed_classes": [],
+        "model_revision": args.model_revision,
     }
 
     image_paths = sorted(
